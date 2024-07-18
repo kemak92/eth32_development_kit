@@ -1,0 +1,288 @@
+#####################################################################
+#configuration HERE
+substitutions:
+  name: "esp32_development"
+  api_pass: " "
+  ota_pass: " "
+  #modbus
+  slave_id: "4" # slave address
+  modbus_baud_rate: "9600"
+  modbus_stop_bits: "1"
+  modbus_data_bits: "8"
+  modbus_parity: "NONE"
+  modbus_rx_buffer_size: "1500"
+  modbus_direction: "BOTH"
+  #ethernet
+  eth_ip: "192.168.1.200"
+  eth_gateway: "192.168.1.1"
+  eth_subnet: "255.255.255.0 "
+  #webserver login
+  user: your_user
+  pass: your_pass
+  #I2C address
+  i2c_address_in: "0x20"
+  i2c_address_out: "0x27"
+  i2c_frequency: "400kHz"
+#####################################################################
+###### MODBUS_MAPS ######
+# RELAY
+# U2-P0  -->> 11
+# U2-P1  -->> 12
+# U2-P2  -->> 13
+# U2-P3  -->> 14
+# U2-P4  -->> 15
+# U2-P5  -->> 16
+# U2-P6  -->> 17
+# U2-P7  -->> 18
+# U2-P10 -->> 19
+# U2-P11 -->> 20
+# U2-P12 -->> 21
+# U2-P13 -->> 22
+# U2-P14 -->> 23
+# U2-P15 -->> 24
+# U2-P16 -->> 25
+# U2-P17 -->> 26
+
+esphome:
+  name: "${name}"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source: github://epiclabs-io/esphome-modbus-server@master
+    refresh: 60s
+    components:
+      - modbus_server
+    
+ethernet:
+  type: LAN8720
+  mdc_pin: GPIO23
+  mdio_pin: GPIO18
+  clk_mode: GPIO17_OUT
+  phy_addr: 0
+
+  # Optional manual IP
+  manual_ip:
+    static_ip: ${eth_ip}
+    gateway: ${eth_gateway}
+    subnet: ${eth_subnet} 
+ 
+#wifi:
+ # ssid: !secret wifi_ssid
+ # password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+ # ap:
+ #   ssid: "Gg Fallback Hotspot"
+ #   password: "v2qDtauPY7kh"
+ # manual_ip:
+ #   static_ip: 192.168.1.234
+ #   gateway: 192.168.1.1
+ #   subnet: 255.255.255.0  
+# Enable logging
+#captive_portal:
+  # Optional manual IP
+
+logger:
+#  level: VERBOSE
+  logs:
+    component: ERROR
+# Enable Home Assistant API
+api:
+  encryption:
+    key: ${api_pass}
+
+ota:
+  password: ${ota_pass}
+web_server:
+  port: 80
+  auth:
+    username: ${user}
+    password: ${pass}
+# Example configuration entry for ESP32
+#i2c:
+ # sda: 5
+ # scl: 16
+ # scan: true
+ # id: bus_a
+ # frequency: ${i2c_frequency}
+# Example configuration entry
+##pcf8574:
+ # - id: 'pcf8574_hub_out_1'  # for output channel 1-16
+ #   i2c_id: bus_a
+  #  address: ${i2c_address_out}
+  #  pcf8575: true
+  #- id: 'pcf8574_hub_in_1'  # for input channel 1-16
+  ##  i2c_id: bus_a
+  #  address: ${i2c_address_in}
+  #  pcf8575: true
+
+# Enable Home Assistant API
+uart:
+  - id: intmodbus
+    tx_pin: 14
+    rx_pin: 13
+    baud_rate: ${modbus_baud_rate}
+    stop_bits: ${modbus_stop_bits}
+    data_bits: ${modbus_data_bits}
+    parity: ${modbus_parity}
+    rx_buffer_size: ${modbus_rx_buffer_size}
+    debug:
+      direction: ${modbus_direction}
+
+modbus_server:
+  - id: modbuserver
+    uart_id: intmodbus
+    address: "${slave_id}"# slave address
+    holding_registers:
+      #- start_address: 79 # starting register range
+      #  default: 82 # default value for all those registers
+      #  number: 10 # number of registers in the range
+      #  on_read: | # called whenever a register in the range is read
+      #    // 'address' contains the requested register address
+      #    // 'value' contains the stored register value 
+      #    ESP_LOGI("ON_READ", "This is a lambda. address=%d, value=%d", address, value);
+      #    return value; // you can return the stored value or something else.
+      #########
+      - start_address: 10 # in this example we map register 10 to a switch
+        number: 1
+        on_write: |
+          if(value){
+            id(testswitch4)->turn_on();
+            id(testswitch4).publish_state(true);
+            }
+          else
+          {
+            id(testswitch4)->turn_off();
+            id(testswitch4).publish_state(false);
+            }
+          return value;
+        on_read: |
+          return id(testswitch4)->state ? 1 : 0;
+          // Within lambda, get the switch state and conditionally do something
+          if (id(testswitch4).state) {
+           // Switch is ON, do something here
+          id(testswitch4).publish_state(true);
+          } else {
+           // Switch is OFF, do something else here
+          id(testswitch4).publish_state(false);
+          }
+      ##########
+      - start_address: 11 # in this example we map register 11 to a switch
+        number: 1
+        on_write: |
+          if(value){
+            id(testswitch5)->turn_on();
+            id(testswitch5).publish_state(true);
+            }
+          else
+          {
+            id(testswitch5)->turn_off();
+            id(testswitch5).publish_state(false);
+            }
+          return value;
+        on_read: |
+          return id(testswitch5)->state ? 1 : 0;
+          // Within lambda, get the switch state and conditionally do something
+          if (id(testswitch5).state) {
+           // Switch is ON, do something here
+          id(testswitch5).publish_state(true);
+          } else {
+           // Switch is OFF, do something else here
+          id(testswitch5).publish_state(false);
+          }
+      ##########
+      - start_address: 12 # in this example we map register 10 to a switch
+        number: 1
+        on_write: |
+          if(value){
+            id(testswitch15)->turn_on();
+            id(testswitch15).publish_state(true);
+            }
+          else
+          {
+            id(testswitch15)->turn_off();
+            id(testswitch15).publish_state(false);
+            }
+          return value;
+        on_read: |
+          return id(testswitch15)->state ? 1 : 0;
+          // Within lambda, get the switch state and conditionally do something
+          if (id(testswitch15).state) {
+           // Switch is ON, do something here
+          id(testswitch15).publish_state(true);
+          } else {
+           // Switch is OFF, do something else here
+          id(testswitch15).publish_state(false);
+          }
+      ##########
+      ########
+
+switch:
+  - platform: gpio
+    pin: 15
+    name: ${name} Modbus Button 15
+    id: testswitch15
+    on_turn_on:
+    - logger.log: "Switch 15 Turned On!"
+    on_turn_off:
+    - logger.log: "Switch 15 Turned Off!"
+  - platform: gpio
+    pin: 4
+    name: ${name} Modbus Button 4
+    id: testswitch4
+    on_turn_on:
+    - logger.log: "Switch 4 Turned On!"
+    on_turn_off:
+    - logger.log: "Switch 4 Turned Off!" 
+  - platform: gpio
+    pin: 5
+    name: ${name} Modbus Button 5
+    id: testswitch5
+    on_turn_on:
+    - logger.log: "Switch 5 Turned On!"
+    on_turn_off:
+    - logger.log: "Switch 5 Turned Off!" 
+
+binary_sensor:
+  - platform: gpio
+    name: ${name} ETH32--IN0
+    id: SW0
+    pin:
+      number: 34
+      mode: INPUT
+      inverted: False
+    filters:
+      - delayed_on: 250ms      
+    on_press:
+      then:
+        - switch.toggle: testswitch5
+  - platform: gpio
+    name: ${name} ETH32--IN1
+    id: SW1
+    pin:
+      number: 35
+      mode: INPUT
+      inverted: False
+    filters:
+      - delayed_on: 250ms      
+    on_press:
+      then:
+        - switch.toggle: testswitch4
+  - platform: gpio
+    name: ${name} ETH32--IN2
+    id: SW2
+    pin:
+      number: 39
+      mode: INPUT
+      inverted: False
+    filters:
+      - delayed_on: 250ms      
+    on_press:
+      then:
+        - switch.toggle: testswitch15
+
+  
